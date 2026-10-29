@@ -50,6 +50,7 @@ class EnergyChartsClient:
                 self._wait_for_request_slot()
                 response = self._client.get(path, params=clean_params)
                 if response.status_code == httpx.codes.TOO_MANY_REQUESTS:
+                    last_error = RuntimeError(_response_error_message(response))
                     self._sleep_after_rate_limit(response, attempt)
                     continue
                 response.raise_for_status()
@@ -64,7 +65,8 @@ class EnergyChartsClient:
                     break
                 time.sleep(self.config.backoff_seconds * attempt)
 
-        raise RuntimeError(f"Energy-Charts request failed for {path}") from last_error
+        detail = f": {last_error}" if last_error else ""
+        raise RuntimeError(f"Energy-Charts request failed for {path}{detail}") from last_error
 
     def _wait_for_request_slot(self) -> None:
         elapsed = time.monotonic() - self._last_request_at
@@ -88,3 +90,12 @@ class EnergyChartsClient:
         clean_params = {key: value for key, value in params.items() if value not in (None, "")}
         path = endpoint if endpoint.startswith("/") else f"/{endpoint}"
         return str(self._client.build_request("GET", path, params=clean_params).url)
+
+
+def _response_error_message(response: httpx.Response) -> str:
+    text = response.text.strip().replace("\n", " ")
+    if len(text) > 240:
+        text = f"{text[:237]}..."
+    if text:
+        return f"HTTP {response.status_code} {response.reason_phrase}: {text}"
+    return f"HTTP {response.status_code} {response.reason_phrase}"

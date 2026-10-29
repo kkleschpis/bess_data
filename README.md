@@ -40,6 +40,29 @@ Data is written to:
 - `data/raw/` as raw API JSON
 - `data/processed/` as tidy Parquet tables
 
+## Price Threshold Report
+
+Create an Excel workbook with annual cumulative day-ahead price hours below a threshold
+for EU countries plus the UK:
+
+```powershell
+$env:ENTSOE_API_TOKEN="<your-token>"
+.\.venv\Scripts\python.exe -m bess_pipeline.price_threshold_report 5
+```
+
+The threshold is in EUR/MWh. The default source is ENTSO-E because it has broader EU
+and UK bidding-zone coverage. You can also use the no-token Energy-Charts fallback:
+
+```powershell
+.\.venv\Scripts\python.exe -m bess_pipeline.price_threshold_report 5 --source energy-charts
+```
+
+The workbook is written to `data/processed/` unless `--output` is provided. It contains
+country annual hours, country running cumulative hours, bidding-zone detail, coverage
+notes, fetch status, and run metadata. For countries with multiple bidding zones, the
+country sheet uses a simple average of available bidding-zone prices per timestamp; use
+the zone sheet when you need regional detail.
+
 ## Streamlit
 
 ```powershell
